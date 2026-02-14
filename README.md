@@ -28,6 +28,16 @@ npm run dev
 
 Opens a local dev server at `http://localhost:5173`.
 
+## Google Analytics 4
+
+GA4 tracking is enabled when the `VITE_GA_MEASUREMENT_ID` environment variable is set. Without it, no analytics code runs.
+
+To configure, create a `.env` or `.env.production` file in the project root:
+
+```
+VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+```
+
 ## Production Build
 
 ```bash
