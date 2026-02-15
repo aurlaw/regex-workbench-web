@@ -25,7 +25,7 @@ supabase functions deploy generate-pattern
 ## Test locally
 
 ```bash
-supabase functions serve
+supabase functions serve 
 ```
 
 Then call the function:

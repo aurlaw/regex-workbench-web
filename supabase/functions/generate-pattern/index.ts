@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const MODEL = "claude-haiku-4-5-20250929";
+const MODEL = "claude-haiku-4-5-20251001";
 const MAX_TOKENS = 1024;
 
 const SYSTEM_PROMPT = `You are a regex expert. Given highlighted text and its surrounding context, generate a regular expression pattern that matches the highlighted text.
@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
 
   // Validate Supabase JWT
   const authHeader = req.headers.get("Authorization");
+
   if (!authHeader) {
     return jsonResponse({ error: "Missing authorization header" }, 401);
   }
@@ -62,6 +63,7 @@ Deno.serve(async (req) => {
     error: authError,
   } = await supabase.auth.getUser();
 
+  // comment this out for local testing
   if (authError || !user) {
     return jsonResponse({ error: "Invalid or expired token" }, 401);
   }
