@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { RegexFlags, RegexValidation } from '../types/regex'
 import { useClipboard } from '../composables/useClipboard'
 
@@ -30,30 +30,39 @@ const showValid = computed(() => props.pattern !== '' && props.validation.isVali
 const showInvalid = computed(() => props.pattern !== '' && !props.validation.isValid)
 
 const { copy: copyPattern, justCopied: patternCopied } = useClipboard()
+
+const inputRef = ref<HTMLInputElement | null>(null)
+
+defineExpose({
+  focus() {
+    inputRef.value?.focus()
+  },
+})
 </script>
 
 <template>
   <div class="space-y-3">
     <div class="flex items-center gap-2">
       <div class="relative flex-1">
-        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 select-none">/</span>
+        <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 select-none">/</span>
         <input
+          ref="inputRef"
           type="text"
           :value="pattern"
           @input="emit('update:pattern', ($event.target as HTMLInputElement).value)"
-          placeholder="Enter regex pattern..."
+          placeholder="\d{3}-\d{4}"
           spellcheck="false"
           autocomplete="off"
-          class="w-full rounded-lg border bg-white py-2 pl-7 pr-3 font-mono text-sm outline-none transition-colors focus:ring-2 focus:ring-blue-500/40"
+          class="w-full rounded-lg border bg-white py-2 pl-7 pr-3 font-mono text-sm outline-none transition-colors focus:ring-2 focus:ring-blue-500/40 dark:bg-gray-800 dark:text-gray-100 placeholder:text-gray-300 dark:placeholder:text-gray-600"
           :class="[
             showInvalid
-              ? 'border-red-400 focus:border-red-500'
+              ? 'border-red-400 focus:border-red-500 dark:border-red-500'
               : showValid
-                ? 'border-green-400 focus:border-green-500'
-                : 'border-gray-300 focus:border-blue-500',
+                ? 'border-green-400 focus:border-green-500 dark:border-green-500'
+                : 'border-gray-300 focus:border-blue-500 dark:border-gray-600 dark:focus:border-blue-400',
           ]"
         />
-        <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 select-none">/</span>
+        <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 select-none">/</span>
       </div>
 
       <button
@@ -61,7 +70,7 @@ const { copy: copyPattern, justCopied: patternCopied } = useClipboard()
         type="button"
         title="Copy pattern"
         @click="copyPattern(pattern)"
-        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
       >
         <svg v-if="patternCopied" class="h-4 w-4 text-green-500" viewBox="0 0 20 20" fill="currentColor">
           <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
@@ -85,10 +94,10 @@ const { copy: copyPattern, justCopied: patternCopied } = useClipboard()
       </div>
     </div>
 
-    <p v-if="showInvalid" class="text-sm text-red-600">{{ validation.error }}</p>
+    <p v-if="showInvalid" class="text-sm text-red-600 dark:text-red-400">{{ validation.error }}</p>
 
     <div class="flex items-center gap-1">
-      <span class="mr-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Flags</span>
+      <span class="mr-2 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Flags</span>
       <button
         v-for="flag in flagToggles"
         :key="flag.key"
@@ -99,7 +108,7 @@ const { copy: copyPattern, justCopied: patternCopied } = useClipboard()
         :class="[
           flags[flag.key]
             ? 'bg-blue-600 text-white'
-            : 'bg-gray-100 text-gray-500 hover:bg-gray-200',
+            : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600',
         ]"
       >
         {{ flag.label }}

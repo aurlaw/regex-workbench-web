@@ -67,24 +67,24 @@ watch(
   >
     <div v-if="hasPattern" class="flex items-center gap-3 rounded-lg border px-4 py-2"
       :class="matches.length > 0
-        ? 'border-gray-200 bg-white'
-        : 'border-amber-200 bg-amber-50'"
+        ? 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'
+        : 'border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/30'"
     >
       <template v-if="matches.length > 0">
-        <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+        <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
           {{ displayCount }} {{ matches.length === 1 ? 'match' : 'matches' }}
         </span>
-        <span class="text-gray-300" aria-hidden="true">&middot;</span>
-        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+        <span class="text-gray-300 dark:text-gray-600" aria-hidden="true">&middot;</span>
+        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
           {{ displayChars }} {{ totalChars === 1 ? 'char' : 'chars' }}
         </span>
-        <span class="text-gray-300" aria-hidden="true">&middot;</span>
-        <span class="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-700">
+        <span class="text-gray-300 dark:text-gray-600" aria-hidden="true">&middot;</span>
+        <span class="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
           {{ displayPercent }}% of text
         </span>
       </template>
       <template v-else>
-        <span class="text-xs font-medium text-amber-600">No matches</span>
+        <span class="text-xs font-medium text-amber-600 dark:text-amber-400">No matches</span>
       </template>
     </div>
   </Transition>

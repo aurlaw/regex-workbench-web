@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { RegexMatch } from '../types/regex'
 
 type Segment =
@@ -15,6 +15,14 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
+
+defineExpose({
+  focus() {
+    textareaRef.value?.focus()
+  },
+})
+
 const segments = computed<Segment[]>(() => {
   const text = props.modelValue
   if (text === '' || props.matches.length === 0) {
@@ -29,7 +37,6 @@ const segments = computed<Segment[]>(() => {
   for (let i = 0; i < sorted.length; i++) {
     const match = sorted[i]!
 
-    // Skip matches that start before our cursor (overlapping)
     if (match.index < cursor) continue
 
     if (match.index > cursor) {
@@ -57,21 +64,22 @@ const segments = computed<Segment[]>(() => {
 <template>
   <div class="space-y-3">
     <textarea
+      ref="textareaRef"
       :value="modelValue"
       @input="emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
       placeholder="Enter test text..."
       spellcheck="false"
       rows="6"
-      class="w-full resize-y rounded-lg border border-gray-300 bg-white p-3 font-mono text-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40"
+      class="w-full resize-y rounded-lg border border-gray-300 bg-white p-3 font-mono text-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/40 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:focus:border-blue-400"
     />
 
-    <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-      <p v-if="modelValue === ''" class="font-mono text-sm text-gray-400 italic">
+    <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50">
+      <p v-if="modelValue === ''" class="font-mono text-sm text-gray-400 dark:text-gray-500 italic">
         Match preview will appear here...
       </p>
       <pre
         v-else
-        class="whitespace-pre-wrap break-words font-mono text-sm text-gray-800"
+        class="whitespace-pre-wrap break-words font-mono text-sm text-gray-800 dark:text-gray-200"
       ><!--
         --><template v-for="(seg, i) in segments" :key="i"><!--
           --><template v-if="seg.kind === 'text'">{{ seg.value }}</template><!--
@@ -80,11 +88,11 @@ const segments = computed<Segment[]>(() => {
               class="relative rounded-sm px-px"
               :class="[
                 seg.colorIndex === 0
-                  ? 'bg-yellow-200 border-b-2 border-yellow-400'
-                  : 'bg-orange-200 border-b-2 border-orange-400',
+                  ? 'bg-yellow-200 border-b-2 border-yellow-400 dark:bg-yellow-300/30 dark:border-yellow-500'
+                  : 'bg-orange-200 border-b-2 border-orange-400 dark:bg-orange-300/30 dark:border-orange-500',
               ]"
             >{{ seg.value }}<sup
-                class="pointer-events-none ml-px inline-block -translate-y-1 rounded bg-gray-700 px-1 text-[10px] leading-tight font-semibold text-white"
+                class="pointer-events-none ml-px inline-block -translate-y-1 rounded bg-gray-700 px-1 text-[10px] leading-tight font-semibold text-white dark:bg-gray-600"
               >{{ seg.matchIndex }}</sup></mark><!--
       --></template></pre>
     </div>

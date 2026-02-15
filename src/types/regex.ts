@@ -23,3 +23,8 @@ export interface RegexFlags {
   readonly dotAll: boolean
   readonly unicode: boolean
 }
+
+export interface DiffSegment {
+  readonly kind: 'unchanged' | 'added' | 'removed'
+  readonly value: string
+}

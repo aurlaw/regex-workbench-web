@@ -58,6 +58,8 @@ export interface UrlState {
   pattern: string
   flags: RegexFlags
   testText: string
+  replacement: string
+  mode: 'match' | 'replace'
 }
 
 export function parseUrlState(): UrlState | null {
@@ -66,10 +68,13 @@ export function parseUrlState(): UrlState | null {
   if (p == null) return null
 
   try {
+    const modeParam = params.get('m')
     return {
       pattern: fromBase64(p),
       flags: decodeFlagsString(params.get('f') ?? 'g'),
       testText: fromBase64(params.get('t') ?? ''),
+      replacement: params.get('r') ? fromBase64(params.get('r')!) : '',
+      mode: modeParam === 'replace' ? 'replace' : 'match',
     }
   } catch {
     return null
@@ -80,6 +85,8 @@ export function useShareableUrl(
   pattern: Ref<string>,
   flags: Ref<RegexFlags>,
   testText: Ref<string>,
+  replacement: Ref<string>,
+  mode: Ref<'match' | 'replace'>,
 ) {
   let timer: ReturnType<typeof setTimeout> | undefined
 
@@ -88,6 +95,8 @@ export function useShareableUrl(
     if (pattern.value) params.set('p', toBase64(pattern.value))
     if (pattern.value) params.set('f', encodeFlagsString(flags.value))
     if (testText.value) params.set('t', toBase64(testText.value))
+    if (replacement.value) params.set('r', toBase64(replacement.value))
+    if (mode.value !== 'match') params.set('m', mode.value)
 
     const qs = params.toString()
     const url = qs
@@ -96,7 +105,7 @@ export function useShareableUrl(
     history.replaceState(null, '', url)
   }
 
-  watch([pattern, flags, testText], () => {
+  watch([pattern, flags, testText, replacement, mode], () => {
     clearTimeout(timer)
     timer = setTimeout(updateUrl, 500)
   })
