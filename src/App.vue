@@ -13,6 +13,7 @@ import ResultsPanel from './components/ResultsPanel.vue'
 import MatchStats from './components/MatchStats.vue'
 import ReplacePreview from './components/ReplacePreview.vue'
 import ShortcutsHelp from './components/ShortcutsHelp.vue'
+import AuthButton from './components/AuthButton.vue'
 
 const defaultFlags: RegexFlags = {
   global: true,
@@ -101,6 +102,7 @@ onUnmounted(() => {
           <p class="text-sm text-gray-500 dark:text-gray-400">Test and visualize regular expressions in real time</p>
         </div>
         <div class="flex items-center gap-2">
+          <AuthButton />
           <button
             type="button"
             title="Toggle dark mode"
