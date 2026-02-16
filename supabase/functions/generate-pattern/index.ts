@@ -1,8 +1,10 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-haiku-4-5-20251001";
 const MAX_TOKENS = 1024;
+const RATE_LIMIT = 50;
+const RATE_WINDOW_HOURS = 24;
 
 const SYSTEM_PROMPT = `You are a regex expert. Given highlighted text and its surrounding context, generate a regular expression pattern that matches the highlighted text.
 
@@ -22,10 +24,18 @@ const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(
+  body: unknown,
+  status = 200,
+  extraHeaders: Record<string, string> = {},
+): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+      ...extraHeaders,
+    },
   });
 }
 
@@ -34,6 +44,34 @@ function stripCodeFences(text: string): string {
     .replace(/^```(?:json)?\s*\n?/i, "")
     .replace(/\n?```\s*$/i, "")
     .trim();
+}
+
+function rateLimitHeaders(
+  remaining: number,
+  resetAt: string,
+): Record<string, string> {
+  return {
+    "X-RateLimit-Limit": String(RATE_LIMIT),
+    "X-RateLimit-Remaining": String(Math.max(0, remaining)),
+    "X-RateLimit-Reset": resetAt,
+  };
+}
+
+/** Decode the JWT payload without verification.
+ *  The Supabase edge runtime already verifies the token before
+ *  the function is invoked, so we only need to extract claims. */
+function decodeJwtPayload(
+  token: string,
+): { sub: string; exp: number; [k: string]: unknown } | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (!payload.sub) return null;
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -45,27 +83,76 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  // Validate Supabase JWT
+  // Extract user from JWT
   const authHeader = req.headers.get("Authorization");
 
   if (!authHeader) {
     return jsonResponse({ error: "Missing authorization header" }, 401);
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: authHeader } },
-  });
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const jwtPayload = decodeJwtPayload(token);
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  // comment this out for local testing
-  if (authError || !user) {
+  if (!jwtPayload) {
     return jsonResponse({ error: "Invalid or expired token" }, 401);
+  }
+
+  // Check token expiry
+  if (jwtPayload.exp && jwtPayload.exp < Math.floor(Date.now() / 1000)) {
+    return jsonResponse({ error: "Token has expired" }, 401);
+  }
+
+  const userId = jwtPayload.sub;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  // Use service role client for all database operations
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+  // --- Rate limit check ---
+  const windowStart = new Date(
+    Date.now() - RATE_WINDOW_HOURS * 60 * 60 * 1000,
+  ).toISOString();
+
+  const { data: usageData, error: usageError } = await supabaseAdmin
+    .from("ai_usage")
+    .select("id, created_at")
+    .eq("user_id", userId)
+    .gte("created_at", windowStart)
+    .order("created_at", { ascending: true });
+
+  if (usageError) {
+    return jsonResponse(
+      { error: "Failed to check rate limit", details: usageError.message },
+      500,
+    );
+  }
+
+  const usageCount = usageData?.length ?? 0;
+  const remaining = RATE_LIMIT - usageCount;
+
+  // Calculate reset time from the earliest record in the window
+  const resetAt =
+    usageData && usageData.length > 0
+      ? new Date(
+          new Date(usageData[0].created_at).getTime() +
+            RATE_WINDOW_HOURS * 60 * 60 * 1000,
+        ).toISOString()
+      : new Date(
+          Date.now() + RATE_WINDOW_HOURS * 60 * 60 * 1000,
+        ).toISOString();
+
+  if (remaining <= 0) {
+    return jsonResponse(
+      {
+        error: "Rate limit exceeded",
+        message: `You have exceeded ${RATE_LIMIT} requests in the last ${RATE_WINDOW_HOURS} hours.`,
+        resetAt,
+      },
+      429,
+      rateLimitHeaders(0, resetAt),
+    );
   }
 
   // Parse request body
@@ -152,7 +239,10 @@ Deno.serve(async (req) => {
   }
 
   // Parse Anthropic response
-  let data: { content: { type: string; text: string }[] };
+  let data: {
+    content: { type: string; text: string }[];
+    usage?: { input_tokens: number; output_tokens: number };
+  };
   try {
     data = await anthropicResponse.json();
   } catch {
@@ -167,6 +257,15 @@ Deno.serve(async (req) => {
     );
   }
 
+  // Record usage after successful API call
+  const tokensUsed =
+    (data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0);
+
+  await supabaseAdmin.from("ai_usage").insert({
+    user_id: userId,
+    tokens_used: tokensUsed,
+  });
+
   let result: unknown;
   try {
     result = JSON.parse(stripCodeFences(rawText));
@@ -177,5 +276,16 @@ Deno.serve(async (req) => {
     );
   }
 
-  return jsonResponse(result);
+  // Recalculate remaining after this request
+  const updatedResetAt =
+    usageData && usageData.length > 0
+      ? new Date(
+          new Date(usageData[0].created_at).getTime() +
+            RATE_WINDOW_HOURS * 60 * 60 * 1000,
+        ).toISOString()
+      : new Date(
+          Date.now() + RATE_WINDOW_HOURS * 60 * 60 * 1000,
+        ).toISOString();
+
+  return jsonResponse(result, 200, rateLimitHeaders(remaining - 1, updatedResetAt));
 });

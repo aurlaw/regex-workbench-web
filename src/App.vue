@@ -14,6 +14,7 @@ import MatchStats from './components/MatchStats.vue'
 import ReplacePreview from './components/ReplacePreview.vue'
 import ShortcutsHelp from './components/ShortcutsHelp.vue'
 import AuthButton from './components/AuthButton.vue'
+import AiPatternBuilder from './components/AiPatternBuilder.vue'
 
 const defaultFlags: RegexFlags = {
   global: true,
@@ -39,6 +40,47 @@ const { isDark, toggle: toggleDark } = useDarkMode()
 
 const patternEditorRef = ref<InstanceType<typeof PatternEditor> | null>(null)
 const testTextEditorRef = ref<InstanceType<typeof TestTextEditor> | null>(null)
+
+// AI Pattern Builder state
+const aiBuilderOpen = ref(false)
+const aiBuilderData = ref<{
+  highlightedText: string
+  surroundingContext: string
+  selectionStart: number
+  selectionEnd: number
+  position: { top: number; left: number }
+}>({
+  highlightedText: '',
+  surroundingContext: '',
+  selectionStart: 0,
+  selectionEnd: 0,
+  position: { top: 0, left: 0 },
+})
+
+const aiBuilderIsAlreadyMatched = computed(() => {
+  const { selectionStart, selectionEnd } = aiBuilderData.value
+  if (selectionStart === selectionEnd || matchesValue.value.length === 0) return false
+  // Check if the entire selection range is covered by existing matches
+  return matchesValue.value.some(
+    m => m.index <= selectionStart && m.index + m.length >= selectionEnd,
+  )
+})
+
+function openAiBuilder(payload: {
+  highlightedText: string
+  surroundingContext: string
+  selectionStart: number
+  selectionEnd: number
+  position: { top: number; left: number }
+}) {
+  aiBuilderData.value = payload
+  aiBuilderOpen.value = true
+}
+
+function applyAiPattern(payload: { pattern: string; flags: RegexFlags }) {
+  pattern.value = payload.pattern
+  flags.value = payload.flags
+}
 
 function share() {
   copyShareUrl(getShareUrl())
@@ -194,7 +236,7 @@ onUnmounted(() => {
 
         <section>
           <h2 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Test Text</h2>
-          <TestTextEditor ref="testTextEditorRef" v-model="testText" :matches="matchesValue" />
+          <TestTextEditor ref="testTextEditorRef" v-model="testText" :matches="matchesValue" @open-ai-builder="openAiBuilder" />
           <div v-if="mode === 'replace'" class="mt-4">
             <ReplacePreview :diff="diffValue" />
           </div>
@@ -206,6 +248,20 @@ onUnmounted(() => {
         </section>
       </div>
     </main>
+
+    <!-- AI Pattern Builder popover -->
+    <Teleport to="body">
+      <AiPatternBuilder
+        v-if="aiBuilderOpen"
+        :highlighted-text="aiBuilderData.highlightedText"
+        :surrounding-context="aiBuilderData.surroundingContext"
+        :position="aiBuilderData.position"
+        :is-already-matched="aiBuilderIsAlreadyMatched"
+        :test-text="testText"
+        @apply="applyAiPattern"
+        @close="aiBuilderOpen = false"
+      />
+    </Teleport>
 
     <footer class="border-t border-gray-200 bg-white px-4 py-3 sm:px-6 dark:border-gray-700 dark:bg-gray-800">
       <div class="mx-auto flex max-w-7xl items-center justify-between">

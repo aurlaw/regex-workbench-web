@@ -71,6 +71,11 @@ onUnmounted(() => {
           <kbd class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] dark:bg-gray-700">Escape</kbd>
         </li>
       </ul>
+      <div class="mt-2 border-t border-gray-200 pt-2 dark:border-gray-700">
+        <p class="text-[10px] leading-relaxed text-gray-500 dark:text-gray-400">
+          Select text in the test area to use the AI Pattern Builder
+        </p>
+      </div>
     </div>
   </div>
 </template>
