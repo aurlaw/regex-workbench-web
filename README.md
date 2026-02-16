@@ -108,3 +108,26 @@ Output is written to the `dist/` directory. To preview the production build loca
 ```bash
 npm run preview
 ```
+
+
+## Supabase Local
+
+Create a `.env` or `.env.local` file under `supabase` directory 
+
+```
+SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENTID=Client Id For Git hub provider
+SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET=Client Secret For Git hub provider
+```
+
+
+and `supabase/functions` directory 
+
+```
+ANTHROPIC_API_KEY=API Key for accessing Claude Models
+```
+
+Ensure Docker is running then start supabase
+```bash
+supabase start
+```
+
