@@ -66,6 +66,7 @@ A web-based regular expression testing tool. Enter a regex pattern and test text
 
 - Node.js 20.19+ or 22.12+
 - npm
+- Supabase CLI
 
 ## Setup
 
